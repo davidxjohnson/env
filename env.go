@@ -5,6 +5,7 @@ import (
 	"os"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
 type configType string
@@ -59,10 +60,14 @@ func processField(t reflect.StructField, v reflect.Value) (err error) {
 		return fmt.Errorf("field '%s' cannot be set", t.Name)
 	}
 
-	// Lookup the environment variable and if found, set and
-	// return
+	// Lookup the environment variable and if found, set
 	env, ok := os.LookupEnv(envTag)
 	if ok {
+		// check if choices tag is set and if env var value is valid choice
+		choices, ok := t.Tag.Lookup("choices")
+		if ok && !validChoice(choices, env) {
+			return fmt.Errorf("field '%s' set to '%s', must be one of '%s'", t.Name, env, choices)
+		}
 		return setField(t, v, env)
 	}
 
@@ -77,6 +82,19 @@ func processField(t reflect.StructField, v reflect.Value) (err error) {
 	// variable cannot be found, determine if we should return
 	// an error or if a missing variable is ok/expected.
 	return processMissing(t, envTag, configTypeEnvironment)
+}
+
+// checks csv list of choices to see if it contains a particular value
+func validChoice(choices, value string) bool {
+	if len(choices) == 0 {
+		return true
+	}
+	for _, choice := range strings.Split(choices, ",") {
+		if choice == value {
+			return true
+		}
+	}
+	return false
 }
 
 func setField(t reflect.StructField, v reflect.Value, value string) (err error) {
