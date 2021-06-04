@@ -66,7 +66,7 @@ func processField(t reflect.StructField, v reflect.Value) (err error) {
 		// check if choices tag is set and if env var value is valid choice
 		choices, ok := t.Tag.Lookup("choices")
 		if ok && !validChoice(choices, env) {
-			return fmt.Errorf("environment variable '%s' set to '%s', but must be one of '%s'", envTag, env, choices)
+			return fmt.Errorf("env var '%s' set to '%s', but must be one of '%s'", envTag, env, choices)
 		}
 		return setField(t, v, env)
 	}
