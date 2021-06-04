@@ -29,7 +29,7 @@ func Set(i interface{}) (err error) {
 
 	// Don't try to process a non-pointer value.
 	if v.Kind() != reflect.Ptr || v.IsNil() {
-		return fmt.Errorf("%s is not a pointer.", v.Kind())
+		return fmt.Errorf("%s is not a pointer", v.Kind())
 	}
 
 	v = v.Elem()
@@ -60,21 +60,27 @@ func processField(t reflect.StructField, v reflect.Value) (err error) {
 		return fmt.Errorf("field '%s' cannot be set", t.Name)
 	}
 
-	// Lookup the environment variable and if found, set
+	// Lookup the environment variable and if found,
+	// check if valid against choices struc tag before setting
 	env, ok := os.LookupEnv(envTag)
-	if ok {
+	if ok && len(env) != 0 { // skip this block if env var is empty
 		// check if choices tag is set and if env var value is valid choice
 		choices, ok := t.Tag.Lookup("choices")
-		if ok && !validChoice(choices, env) {
-			return fmt.Errorf("env var '%s' set to '%s', but must be one of '%s'", envTag, env, choices)
+		if ok && !validChoice(choices, env, getDelimiter(t)) {
+			return fmt.Errorf("value of '%s' is '%s', but not a set or subset of '%s'", envTag, env, choices)
 		}
 		return setField(t, v, env)
 	}
 
 	// If the value isn't found in the environment, look for a
-	// user-defined default value
+	// user-defined default value, but first check the default
+	// against valid choices (if any were suplied).
 	d, ok := t.Tag.Lookup("default")
 	if ok {
+		choices, ok := t.Tag.Lookup("choices")
+		if ok && !validChoice(choices, d, getDelimiter(t)) {
+			return fmt.Errorf("default value of '%s' is '%s', but not set or subset of '%s'", envTag, d, choices)
+		}
 		return setField(t, v, d)
 	}
 
@@ -85,10 +91,18 @@ func processField(t reflect.StructField, v reflect.Value) (err error) {
 }
 
 // checks csv list of choices to see if it contains a particular value
-func validChoice(choices, value string) bool {
-	for _, choice := range strings.Split(choices, ",") {
-		if choice == value {
-			return true
+// fortunately, env vars only contain string values, so we can easily
+// validate against a list of choices prior to type conversion
+// TODO: Does the delimiter tag apply to both choices and values?
+func validChoice(choices, values string, delim string) bool {
+	if len(values) == 0 || len(choices) == 0 {
+		return false
+	}
+	for _, choice := range strings.Split(choices, delim) {
+		for _, value := range strings.Split(values, delim) {
+			if choice == value {
+				return true
+			}
 		}
 	}
 	return false

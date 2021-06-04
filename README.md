@@ -28,7 +28,7 @@ type config struct {
 	Secret            []byte        `env:"SECRET" required:"true"`
 	Region            string        `env:"REGION"`
 	Port              int           `env:"PORT" required:"true"`
-	Peers             []string      `env:"PEERS"` // you can use `delimiter` tag to specify separator, for example `delimiter:" "` 
+	Peers             []string      `env:"PEERS"` // you can use `delimiter` tag to specify separator, for example `delimiter:" "`
 	ConnectionTimeout time.Duration `env:"TIMEOUT" default:"10s"`
 }
 
@@ -45,6 +45,14 @@ func main() {
 ``` bash
 $ ID=1 SECRET=shh PORT=1234 PEERS=localhost:1235,localhost:1236 TIMEOUT=5s go run main.go
 ```
+## Valid Tags and Combinations
+|Tag Name|Example|Notes|
+|---|---|---
+|`env`|\`env:"REGION"\`|Mandatory tag indicating the name of the env var.|
+|`delimiter`|\`delimiter:" "\`|Optional unless using delimiter other than `,`. Note that the specified delimiter applies to all of `env`, `choices` and `default` values for a given env var.|
+|`choices`|\`choices:"a,b,c"\`<br>\`choices:"y\|n"&nbsp;delimiter:"\|"`|Validates env var value against a set of valid values. Assumes the set delimiter is `,` unless the `delimiter` tag is used in combination.|
+|`default`|\`default:"text"\`<br>\`default:"a,b,c"\`<br>\`default:"1&nbsp;2&nbsp;3"&nbsp;delimiter:"&nbsp;"\`<br>\`default:"1\|3\|5"&nbsp;choices:"1\|2\|3\|4\|5"&nbsp;delimiter:"\|"\`|Substitute value if env var is non-existent or null. Default can also be a set of values, but must be a set or subset of `choices` tag value, if used in combination.|
+|`required`|\`required:"true"\`|Forces a value to be present for the env var, unless the `default` tag is used. Valid values are "true" or "false".|
 
 ## Supported field types
 

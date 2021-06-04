@@ -524,6 +524,73 @@ func TestEnvRequiredWithDefaultWhenMissing(t *testing.T) {
 	Equals(t, []time.Duration{time.Hour, time.Minute * 2, time.Second * 3}, config.DurationsProp)
 }
 
+func TestEnvInvalidChoice(t *testing.T) {
+	os.Setenv("PROP", "4 5 6")
+
+	config := struct {
+		Prop []int `env:"PROP" choices:"1,2,3" delimiter:" "`
+	}{}
+
+	err := Set(&config)
+	ErrorNotNil(t, err)
+}
+
+func TestEnvDefaultValidChoice(t *testing.T) {
+	os.Setenv("PROP", "")
+
+	config := struct {
+		Prop []int `env:"PROP" default:"1 3 5" choices:"1 2 3 4 5" delimiter:" "`
+	}{}
+
+	err := Set(&config)
+	ErrorNil(t, err)
+	Equals(t, []int{1, 3, 5}, config.Prop)
+}
+
+func TestEnvDefaultInvalidChoice(t *testing.T) {
+	os.Setenv("PROP", "")
+
+	config := struct {
+		Prop []int `env:"PROP" default:"7 9" choices:"1 2 3 4 5" delimiter:" "`
+	}{}
+
+	err := Set(&config)
+	ErrorNotNil(t, err)
+}
+
+func TestEnvEmptyChoice(t *testing.T) {
+	os.Setenv("PROP", "1,3,5")
+
+	config := struct {
+		Prop []int `env:"PROP" choices:""`
+	}{}
+
+	err := Set(&config)
+	ErrorNotNil(t, err)
+}
+
+func TestEnvEmptyDefault(t *testing.T) {
+	os.Setenv("PROP", "1,3,5")
+
+	config := struct {
+		Prop []int `env:"PROP" default:""`
+	}{}
+
+	err := Set(&config)
+	ErrorNil(t, err)
+}
+
+func TestEnvValidChoice(t *testing.T) {
+	os.Setenv("PROP", "1,3,5")
+
+	config := struct {
+		Prop []int `env:"PROP" choices:"0,1,2,3,4,5"`
+	}{}
+
+	ErrorNil(t, Set(&config))
+	Equals(t, []int{1, 3, 5}, config.Prop)
+}
+
 func TestEnvCustomDelimiter(t *testing.T) {
 	os.Setenv("PROP", "a b c")
 
